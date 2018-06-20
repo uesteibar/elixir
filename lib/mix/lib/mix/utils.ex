@@ -196,6 +196,36 @@ defmodule Mix.Utils do
     end
   end
 
+  def modified_deps?(manifest_mtime, compiler_manifest) do
+    Mix.Project.config()
+    |> Keyword.get(:deps)
+    |> Enum.any?(fn {name, opts} ->
+      if Keyword.get(opts, :path) do
+        dep_mtime =
+          name
+          |> dep_manifest_path(compiler_manifest)
+          |> last_modified()
+
+        dep_mtime > manifest_mtime
+      else
+        false
+      end
+    end)
+  end
+
+  defp dep_manifest_path(name, compiler_manifest) do
+    app_path =
+      [name]
+      |> Mix.Dep.loaded_by_name([])
+      |> List.first()
+      |> Map.get(:opts)
+      |> Keyword.get(:build)
+
+    [app_path: app_path]
+    |> Mix.Project.manifest_path()
+    |> Path.join(compiler_manifest)
+  end
+
   @doc """
   Prints n files are being compiled with the given extension.
   """
